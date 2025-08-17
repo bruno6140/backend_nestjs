@@ -11,6 +11,26 @@ async function bootstrap() {
     .setTitle('API')
     .setDescription('API description')
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addApiKey(
+    {
+      type: 'apiKey',
+      name: 'x-api-key',
+      in: 'header',
+      description: 'API Key for access',
+    },
+    'Api-Key-Auth',
+  )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
