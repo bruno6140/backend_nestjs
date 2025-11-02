@@ -7,9 +7,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Repository } from 'typeorm';
-import { LoginDto } from './dto/create-auth.dto';
+import { LoginDto, LogOutDto } from './dto/create-auth.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ActiveToken } from './entities/active-token.entity';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,8 @@ export class AuthService {
     private jwtService: JwtService,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(ActiveToken)
+    private activeTokenRepository: Repository<ActiveToken>,
   ) {}
 
   async login(loginDto: LoginDto): Promise<any> {
@@ -40,6 +43,13 @@ export class AuthService {
       };
       const access_token = this.jwtService.sign(payload);
 
+      // Guardar el token
+      const activeToken = this.activeTokenRepository.create({
+        email: user.email,
+        token: access_token,
+      });
+      await this.activeTokenRepository.save(activeToken);
+
       return {
         access_token: access_token,
       };
@@ -51,6 +61,31 @@ export class AuthService {
         console.error('Error al iniciar sesión:', error);
         throw new InternalServerErrorException(
           `Error al iniciar sesión: ${error.message}`,
+        );
+      }
+    }
+  }
+
+  async logout(logoutDto: LogOutDto): Promise<any> {
+    try {
+      // Busca el token activo
+      const activeToken = await this.activeTokenRepository.findOne({
+        where: { email: logoutDto.email, token: logoutDto.token },
+      });
+      if (!activeToken) throw new UnauthorizedException('Sesión no encontrada');
+
+      // Elimina
+      await this.activeTokenRepository.remove(activeToken);
+
+      return { message: 'Sesión cerrada exitosamente.' };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        console.error('Error al cerrar sesión:', error.message);
+        throw error;
+      } else {
+        console.error('Error al cerrar sesión:', error);
+        throw new InternalServerErrorException(
+          `Error al cerrar sesión: ${error.message}`,
         );
       }
     }

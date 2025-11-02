@@ -12,3 +12,15 @@ export class LoginDto {
   @IsNotEmpty()
   readonly password: string;
 }
+
+export class LogOutDto {
+  @ApiProperty()
+  @IsEmail()
+  @IsNotEmpty()
+  readonly email: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  readonly token: string;
+}
