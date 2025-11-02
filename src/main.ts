@@ -23,14 +23,15 @@ async function bootstrap() {
       'JWT-auth',
     )
     .addApiKey(
-    {
-      type: 'apiKey',
-      name: 'x-api-key',
-      in: 'header',
-      description: 'API Key for access',
-    },
-    'Api-Key-Auth',
-  )
+      {
+        type: 'apiKey',
+        name: 'x-api-key',
+        in: 'header',
+        description: 'API Key for access',
+      },
+      'Api-Key-Auth',
+    )
+    .addSecurityRequirements('JWT-auth')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
