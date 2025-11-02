@@ -15,6 +15,13 @@ export class LoginDto {
 
 export class LogOutDto {
   @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  readonly token: string;
+}
+
+export class RefreshTokenDto {
+  @ApiProperty()
   @IsEmail()
   @IsNotEmpty()
   readonly email: string;
@@ -22,5 +29,5 @@ export class LogOutDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  readonly token: string;
+  readonly refresh_token: string;
 }

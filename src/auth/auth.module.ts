@@ -11,11 +11,7 @@ import { ActiveToken } from './entities/active-token.entity';
   imports: [
     ConfigModule.forRoot(),
     TypeOrmModule.forFeature([User, ActiveToken]),
-    JwtModule.register({
-      global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1d' },
-    }),
+    JwtModule.register({ global: true }),
   ],
   controllers: [AuthController],
   providers: [AuthService],

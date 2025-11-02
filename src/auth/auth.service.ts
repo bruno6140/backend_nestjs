@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Repository } from 'typeorm';
-import { LoginDto, LogOutDto } from './dto/create-auth.dto';
+import { LoginDto, LogOutDto, RefreshTokenDto } from './dto/create-auth.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ActiveToken } from './entities/active-token.entity';
@@ -41,17 +41,27 @@ export class AuthService {
         sub: user.id,
         email: user.email,
       };
-      const access_token = this.jwtService.sign(payload);
+
+      // Access y Refresh Tokens
+      const access_token = this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: process.env.JWT_EXPIRE_IN,
+      });
+      const refresh_token = this.jwtService.sign(payload, {
+        secret: process.env.REFRESH_JWT_SECRET,
+        expiresIn: process.env.REFRESH_JWT_EXPIRE_IN,
+      });
 
       // Guardar el token
       const activeToken = this.activeTokenRepository.create({
         email: user.email,
-        token: access_token,
+        token: refresh_token,
       });
       await this.activeTokenRepository.save(activeToken);
 
       return {
         access_token: access_token,
+        refresh_token: refresh_token,
       };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -70,7 +80,7 @@ export class AuthService {
     try {
       // Busca el token activo
       const activeToken = await this.activeTokenRepository.findOne({
-        where: { email: logoutDto.email, token: logoutDto.token },
+        where: { token: logoutDto.token },
       });
       if (!activeToken) throw new UnauthorizedException('Sesión no encontrada');
 
@@ -86,6 +96,51 @@ export class AuthService {
         console.error('Error al cerrar sesión:', error);
         throw new InternalServerErrorException(
           `Error al cerrar sesión: ${error.message}`,
+        );
+      }
+    }
+  }
+
+  async refreshToken(refreshTokenDto: RefreshTokenDto): Promise<any> {
+    try {
+      // Busca el token activo
+      const activeToken = await this.activeTokenRepository.findOne({
+        where: {
+          email: refreshTokenDto.email,
+          token: refreshTokenDto.refresh_token,
+        },
+      });
+      if (!activeToken)
+        throw new UnauthorizedException('Token de sesión inválido');
+
+      // Busca el usuario
+      const user = await this.userRepository.findOne({
+        where: { email: refreshTokenDto.email },
+      });
+      if (!user) throw new UnauthorizedException('Usuario no encontrado');
+
+      // Genera un nuevo Access Token
+      const newPayload = {
+        sub: user.id,
+        email: user.email,
+      };
+      const newAccessToken = this.jwtService.sign(newPayload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: process.env.JWT_EXPIRE_IN,
+      });
+
+      return {
+        access_token: newAccessToken,
+        refresh_token: refreshTokenDto.refresh_token,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        console.error('Error al refrescar token:', error.message);
+        throw error;
+      } else {
+        console.error('Error al refrescar token:', error);
+        throw new InternalServerErrorException(
+          `Error al refrescar token: ${error.message}`,
         );
       }
     }
